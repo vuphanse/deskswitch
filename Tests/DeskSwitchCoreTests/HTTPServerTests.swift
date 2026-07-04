@@ -40,6 +40,23 @@ final class HTTPServerTests: XCTestCase {
         }
         wait(for: [expectation], timeout: 5)
     }
+
+    func testOversizedRequestGets400() throws {
+        let port: UInt16 = 18379
+        let server = try HTTPServer(port: port, maxRequestBytes: 64) { _ in .json(200, ["ok": "1"]) }
+        server.start()
+        defer { server.stop() }
+
+        // Valid request start, Content-Length far beyond the cap, body drips in over it.
+        let big = "POST /switch HTTP/1.1\r\nContent-Length: 100000\r\n\r\n" + String(repeating: "x", count: 200)
+        let expectation = expectation(description: "raw response")
+        let conn = TCPTestClient(host: "127.0.0.1", port: port)
+        conn.sendAndReadAll(Data(big.utf8)) { data in
+            XCTAssertTrue(String(decoding: data, as: UTF8.self).hasPrefix("HTTP/1.1 400"))
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 5)
+    }
 }
 
 import Network

@@ -7,9 +7,12 @@ public final class HTTPServer {
     private let listener: NWListener
     private let handler: (HTTPRequest) -> HTTPResponse
     private let queue = DispatchQueue(label: "deskswitch.http")
+    private let maxRequestBytes: Int
 
-    public init(port: UInt16, handler: @escaping (HTTPRequest) -> HTTPResponse) throws {
+    public init(port: UInt16, maxRequestBytes: Int = 1_048_576,
+                handler: @escaping (HTTPRequest) -> HTTPResponse) throws {
         self.handler = handler
+        self.maxRequestBytes = maxRequestBytes
         self.listener = try NWListener(using: .tcp, on: NWEndpoint.Port(rawValue: port)!)
     }
 
@@ -32,6 +35,10 @@ public final class HTTPServer {
             guard let self else { return }
             var accumulated = buffer
             if let data { accumulated.append(data) }
+            guard accumulated.count <= self.maxRequestBytes else {
+                self.respond(connection, with: .json(400, ["error": "request too large"]))
+                return
+            }
             switch HTTPRequest.parse(accumulated) {
             case .request(let request):
                 self.respond(connection, with: self.handler(request))
