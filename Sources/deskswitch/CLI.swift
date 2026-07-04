@@ -131,7 +131,9 @@ struct Serve: ParsableCommand {
         let server = try HTTPServer(port: UInt16(config.listenPort)) { handler.handle($0) }
         server.start()
         print("deskswitch \(deskswitchVersion) serving on port \(config.listenPort) as '\(config.machineName)'")
-        RunLoop.main.run()  // Task 20 adds the SleepGuard timer here
+        let sleepTimer = startSleepGuardTimer(config: config, router: router)
+        _ = sleepTimer
+        RunLoop.main.run()
     }
 }
 

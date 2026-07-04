@@ -29,6 +29,7 @@ enum Bootstrap {
             server.start()
             let state = MenuState(config: config, router: router, peer: peer,
                                   notifier: UserNotifier())
+            _ = startSleepGuardTimer(config: config, router: router)
             return .success((state, server, config))
         } catch {
             return .failure(BootstrapError(message: "\(error)"))
