@@ -2,22 +2,21 @@ import AppKit
 import DeskSwitchCore
 import SwiftUI
 
-// Compiler-forced addition (not in the brief): `Result`'s `Failure` generic
-// parameter requires `Error` conformance, and `String` does not conform to
-// `Error` in the standard library. Without this, `Result<..., String>` below
-// fails to compile. This is the minimal fix that keeps the brief's
-// `Result<(MenuState, HTTPServer, Config), String>` signature verbatim.
-extension String: @retroactive Error {}
+/// Wraps a human-readable startup failure so it can travel through `Result`
+/// (whose `Failure` parameter requires `Error`, which `String` does not satisfy).
+struct BootstrapError: Error {
+    let message: String
+}
 
 /// Builds the full object graph for app mode. Failure produces an error the
 /// menu can display instead of crashing at launch.
 enum Bootstrap {
-    static func make() -> Result<(MenuState, HTTPServer, Config), String> {
+    static func make() -> Result<(MenuState, HTTPServer, Config), BootstrapError> {
         do {
             let config = try Config.load()
             let issues = config.validate()
             if let firstError = issues.first(where: { $0.isError }) {
-                return .failure(firstError.message)
+                return .failure(BootstrapError(message: firstError.message))
             }
             for warning in issues where !warning.isError {
                 FileHandle.standardError.write(Data(("config: " + warning.message + "\n").utf8))
@@ -33,7 +32,7 @@ enum Bootstrap {
                                   notifier: StderrNotifier())
             return .success((state, server, config))
         } catch {
-            return .failure("\(error)")
+            return .failure(BootstrapError(message: "\(error)"))
         }
     }
 }
@@ -48,9 +47,9 @@ struct DeskSwitchApp: App {
                 MenuContent(state: state,
                             machineName: config.machineName,
                             peerName: config.peer.name)
-            case .failure(let message):
+            case .failure(let error):
                 Text("deskswitch failed to start")
-                Text(message)
+                Text(error.message)
                 Divider()
                 Button("Quit") { NSApp.terminate(nil) }
             }
