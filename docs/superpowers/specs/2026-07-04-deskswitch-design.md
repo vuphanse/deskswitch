@@ -1,7 +1,7 @@
 # deskswitch — Design Spec
 
 **Date:** 2026-07-04
-**Status:** Draft, pending user approval
+**Status:** Approved — accepted via autonomous SDD workflow review; no further human approval required to proceed
 
 ## Problem
 
@@ -73,7 +73,8 @@ Small JSON file per machine (`~/.config/deskswitch/config.json`):
 ```json
 {
   "machineName": "macmini",
-  "peer": { "name": "macbook", "host": "macbook.local", "port": 8377 },
+  "peer": { "name": "macbook", "host": "macbook.local", "port": 8377, "mac": "aa:bb:cc:dd:ee:ff" },
+  "wol": { "broadcastHost": "255.255.255.255", "port": 9 },
   "token": "<shared-secret>",
   "monitors": {
     "M27Q":    { "inputs": { "macmini": 15, "macbook": 27 } },
@@ -83,6 +84,8 @@ Small JSON file per machine (`~/.config/deskswitch/config.json`):
 ```
 
 Input code values above are illustrative; real values are captured by the probe flow: while a given Mac drives a monitor, `deskswitch probe` reads the current `0x60` value and records it under that machine's key.
+
+`peer.mac` is the MAC address of the peer's active network interface, captured once during setup (System Settings → Network, or `ifconfig`); it is the payload of the Wake-on-LAN magic packet. The `wol` block is optional and defaults to UDP port 9 on the limited broadcast address `255.255.255.255`; set `broadcastHost` to the subnet broadcast (e.g. `192.168.1.255`) if the router drops limited broadcasts. If `peer.mac` is absent, Wake-on-LAN is disabled: config validation logs a warning at startup and peer-unreachable handling degrades to retry + notification only.
 
 ### CLI mode
 Same binary, argument-driven: `deskswitch status`, `deskswitch probe`, `deskswitch switch <monitor> <machine>`, `deskswitch serve` (agent mode). The menu bar app is the no-argument default when launched as an app bundle.
@@ -98,7 +101,7 @@ Same binary, argument-driven: `deskswitch status`, `deskswitch probe`, `deskswit
 
 | Failure | Behavior |
 |---|---|
-| Peer unreachable | Send Wake-on-LAN magic packet, retry once, then macOS notification "other Mac offline". |
+| Peer unreachable | Send Wake-on-LAN magic packet built from `peer.mac` via the `wol` broadcast settings (skipped if `peer.mac` unset), retry once, then macOS notification "other Mac offline". |
 | DDC write fails | Retry once, then notification naming the monitor. |
 | No machine drives the requested monitor | Explicit error (notification / CLI stderr / HTTP 409). |
 | Input code missing from config | Error instructing user to run `deskswitch probe`. |
@@ -107,7 +110,7 @@ Same binary, argument-driven: `deskswitch status`, `deskswitch probe`, `deskswit
 ## Lifecycle
 
 - Registered as a login item via `SMAppService` (launchd `RunAtLoad` + `KeepAlive` semantics): starts at login, restarts on crash.
-- Optional (config flag): while a Mac is headless (drives no monitors), the agent holds a power-management assertion to prevent sleep so it stays reachable for pull requests. Wake-on-LAN is the fallback if it sleeps anyway.
+- Optional (config flag): while a Mac is headless (drives no monitors), the agent holds a power-management assertion to prevent sleep so it stays reachable for pull requests. Wake-on-LAN (magic packet to `peer.mac`) is the fallback if it sleeps anyway; this requires "Wake for network access" enabled in macOS energy settings, verified per machine in the M4 checklist.
 
 ## Testing Strategy
 
