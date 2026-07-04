@@ -32,4 +32,12 @@ final class EDIDTests: XCTestCase {
     func testReturnsNilForShortData() {
         XCTAssertNil(edidDisplayName(Data(repeating: 0, count: 10)))
     }
+
+    func testParsesNameFromDataSlice() {
+        // Data slices keep the parent's indices; the parser must not assume startIndex 0.
+        var padded = Data(repeating: 0xEE, count: 10)
+        padded.append(makeEDID(name: "M27Q"))
+        let slice = padded[10...]
+        XCTAssertEqual(edidDisplayName(slice), "M27Q")
+    }
 }

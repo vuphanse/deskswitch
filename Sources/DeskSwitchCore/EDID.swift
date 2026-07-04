@@ -6,10 +6,11 @@ import Foundation
 /// by 0x0A and padded with 0x20.
 public func edidDisplayName(_ data: Data) -> String? {
     guard data.count >= 128 else { return nil }
+    let bytes = [UInt8](data)  // normalize: Data slices carry nonzero startIndex
     for offset in [54, 72, 90, 108] {
-        guard data[offset] == 0, data[offset + 1] == 0, data[offset + 2] == 0,
-              data[offset + 3] == 0xFC else { continue }
-        let raw = data[(offset + 5)..<(offset + 18)]
+        guard bytes[offset] == 0, bytes[offset + 1] == 0, bytes[offset + 2] == 0,
+              bytes[offset + 3] == 0xFC else { continue }
+        let raw = bytes[(offset + 5)..<(offset + 18)]
         let text = String(decoding: raw, as: UTF8.self)
         let name = (text.split(separator: "\n").first.map(String.init) ?? text)
             .trimmingCharacters(in: .whitespaces)
