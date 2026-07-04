@@ -29,9 +29,10 @@ public struct HTTPRequest: Equatable {
             let value = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
             headers[key] = value
         }
-        let length = Int(headers["content-length"] ?? "0") ?? 0
+        let lengthString = headers["content-length"] ?? "0"
+        guard let length = Int(lengthString), length >= 0 else { return .invalid }
         let bodyStart = headerEnd.upperBound
-        guard data.count - bodyStart >= length else { return .incomplete }
+        guard data.endIndex - bodyStart >= length else { return .incomplete }
         let body = data.subdata(in: bodyStart..<(bodyStart + length))
         return .request(HTTPRequest(method: String(requestLine[0]),
                                     path: String(requestLine[1]),
