@@ -94,6 +94,12 @@ public struct Config: Codable, Equatable {
         if !(1...65535).contains(listenPort) {
             issues.append(.init(message: "listenPort must be 1-65535", isError: true))
         }
+        if !(1...65535).contains(wol.port) {
+            issues.append(.init(message: "wol.port must be 1-65535", isError: true))
+        }
+        if peer.host.isEmpty || peer.host.range(of: "^[A-Za-z0-9.-]+$", options: .regularExpression) == nil {
+            issues.append(.init(message: "peer.host must be a valid hostname or IP: '\(peer.host)'", isError: true))
+        }
         if token.isEmpty {
             issues.append(.init(message: "token must not be empty", isError: true))
         }

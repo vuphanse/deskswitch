@@ -129,6 +129,10 @@ struct Serve: ParsableCommand {
         let router = makeRouter(config: config)
         let handler = APIHandler(router: router, token: config.token)
         let server = try HTTPServer(port: UInt16(config.listenPort)) { handler.handle($0) }
+        server.onListenerFailure = { message in
+            FileHandle.standardError.write(Data("HTTP listener failed: \(message)\n".utf8))
+            Foundation.exit(1)
+        }
         server.start()
         print("deskswitch \(deskswitchVersion) serving on port \(config.listenPort) as '\(config.machineName)'")
         let sleepTimer = startSleepGuardTimer(config: config, router: router)

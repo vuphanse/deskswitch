@@ -5,7 +5,10 @@
     <key>Label</key><string>com.vuphan.deskswitch</string>
     <key>BundleProgram</key><string>Contents/MacOS/deskswitch</string>
     <key>RunAtLoad</key><true/>
-    <key>KeepAlive</key><true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key><false/>
+    </dict>
     <key>ProcessType</key><string>Interactive</string>
 </dict>
 </plist>

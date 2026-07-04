@@ -26,6 +26,9 @@ enum Bootstrap {
             let router = Router(config: config, ddc: engine, peer: peer)
             let handler = APIHandler(router: router, token: config.token)
             let server = try HTTPServer(port: UInt16(config.listenPort)) { handler.handle($0) }
+            server.onListenerFailure = { message in
+                FileHandle.standardError.write(Data("deskswitch: HTTP listener failed: \(message)\n".utf8))
+            }
             server.start()
             let state = MenuState(config: config, router: router, peer: peer,
                                   notifier: UserNotifier())

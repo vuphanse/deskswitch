@@ -8,6 +8,8 @@ Prerequisite: M3 checklist passed; rebuilt bundle (scripts/make-app.sh) installe
       (approve in System Settings > General > Login Items if prompted)
 - [ ] Log out / in: menu bar icon appears without manual launch
 - [ ] `kill -9 <pid>` the running deskswitch: launchd restarts it within seconds (KeepAlive)
+- [ ] Quit from the menu with autostart enabled: the app STAYS quit (KeepAlive restarts
+      only on crash/kill, not on clean exit)
 
 ## Flip both
 - [ ] Menu "Send both away" flips both monitors to the peer in one action

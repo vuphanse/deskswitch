@@ -9,6 +9,9 @@ public final class HTTPServer {
     private let queue = DispatchQueue(label: "deskswitch.http")
     private let maxRequestBytes: Int
 
+    /// Invoked (on the server queue) if the listener enters .failed — e.g. port in use.
+    public var onListenerFailure: ((String) -> Void)?
+
     public init(port: UInt16, maxRequestBytes: Int = 1_048_576,
                 handler: @escaping (HTTPRequest) -> HTTPResponse) throws {
         self.handler = handler
@@ -17,6 +20,11 @@ public final class HTTPServer {
     }
 
     public func start() {
+        listener.stateUpdateHandler = { [weak self] state in
+            if case .failed(let error) = state {
+                self?.onListenerFailure?("\(error)")
+            }
+        }
         listener.newConnectionHandler = { [weak self] connection in
             guard let self else { return }
             connection.start(queue: self.queue)

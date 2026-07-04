@@ -33,14 +33,20 @@ public final class SleepGuard {
     }
 }
 
-/// Re-evaluates headlessness once a minute (cheap local DDC enumeration only).
+/// Re-evaluates headlessness once a minute. Evaluation runs on a background queue:
+/// localStatus() performs real DDC I2C reads when displays are attached, which must
+/// never block the main RunLoop (the headless case — the one that matters — is cheap).
 public func startSleepGuardTimer(config: Config, router: Router) -> Timer {
     let sleepGuard = SleepGuard()
-    let timer = Timer(timeInterval: 60, repeats: true) { _ in
-        sleepGuard.update(headless: router.localStatus().monitors.isEmpty,
-                          enabled: config.preventSleepWhenHeadless)
+    let queue = DispatchQueue(label: "deskswitch.sleepguard", qos: .utility)
+    let evaluate = {
+        queue.async {
+            sleepGuard.update(headless: router.localStatus().monitors.isEmpty,
+                              enabled: config.preventSleepWhenHeadless)
+        }
     }
-    timer.fire()
+    let timer = Timer(timeInterval: 60, repeats: true) { _ in evaluate() }
+    evaluate()
     RunLoop.main.add(timer, forMode: .common)
     return timer
 }

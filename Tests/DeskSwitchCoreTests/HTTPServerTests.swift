@@ -41,6 +41,23 @@ final class HTTPServerTests: XCTestCase {
         wait(for: [expectation], timeout: 5)
     }
 
+    func testListenerFailureCallbackFiresOnPortConflict() throws {
+        let port: UInt16 = 18384
+        let first = try HTTPServer(port: port) { _ in .json(200, ["ok": "1"]) }
+        first.start()
+        defer { first.stop() }
+        // Give the first listener a moment to bind.
+        Thread.sleep(forTimeInterval: 0.2)
+
+        let second = try HTTPServer(port: port) { _ in .json(200, ["ok": "2"]) }
+        let expectation = expectation(description: "failure callback")
+        expectation.assertForOverFulfill = false
+        second.onListenerFailure = { _ in expectation.fulfill() }
+        second.start()
+        defer { second.stop() }
+        wait(for: [expectation], timeout: 5)
+    }
+
     func testOversizedRequestGets400() throws {
         let port: UInt16 = 18379
         let server = try HTTPServer(port: port, maxRequestBytes: 64) { _ in .json(200, ["ok": "1"]) }

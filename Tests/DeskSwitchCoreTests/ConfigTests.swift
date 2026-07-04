@@ -78,6 +78,20 @@ final class ConfigTests: XCTestCase {
         XCTAssertFalse(try decode(Self.fullJSON).validate().contains { $0.isError })
     }
 
+    func testValidateRejectsBadWolPortAndHost() throws {
+        var badWol = try decode(Self.fullJSON)
+        badWol.wol.port = 70000
+        XCTAssertTrue(badWol.validate().contains { $0.isError && $0.message.contains("wol.port") })
+
+        var badHost = try decode(Self.fullJSON)
+        badHost.peer.host = "not a host"
+        XCTAssertTrue(badHost.validate().contains { $0.isError && $0.message.contains("peer.host") })
+
+        var emptyHost = try decode(Self.fullJSON)
+        emptyHost.peer.host = ""
+        XCTAssertTrue(emptyHost.validate().contains { $0.isError && $0.message.contains("peer.host") })
+    }
+
     func testLookups() throws {
         let c = try decode(Self.fullJSON)
         XCTAssertEqual(c.inputCode(monitor: "M27Q", machine: "macbook"), 27)
