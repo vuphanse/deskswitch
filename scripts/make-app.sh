@@ -9,6 +9,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp .build/release/deskswitch "$APP/Contents/MacOS/deskswitch"
 cp packaging/Info.plist "$APP/Contents/Info.plist"
-# Task 19 adds: mkdir -p "$APP/Contents/Library/LaunchAgents" + LaunchAgent plist copy
+mkdir -p "$APP/Contents/Library/LaunchAgents"
+cp packaging/com.vuphan.deskswitch.plist "$APP/Contents/Library/LaunchAgents/"
 codesign --force --sign - "$APP"
 echo "Built $APP — copy to /Applications on both Macs"

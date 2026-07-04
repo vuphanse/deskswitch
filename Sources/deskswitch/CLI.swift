@@ -1,6 +1,7 @@
 import ArgumentParser
 import DeskSwitchCore
 import Foundation
+import ServiceManagement
 
 func fail(_ message: String) -> Never {
     FileHandle.standardError.write(Data((message + "\n").utf8))
@@ -43,7 +44,7 @@ struct DeskSwitchCLI: ParsableCommand {
         commandName: "deskswitch",
         abstract: "Programmatic monitor input switching between two Macs (DDC/CI).",
         version: deskswitchVersion,
-        subcommands: [Status.self, Probe.self, Switch.self, Serve.self])
+        subcommands: [Status.self, Probe.self, Switch.self, Serve.self, Autostart.self])
 }
 
 struct Status: ParsableCommand {
@@ -131,5 +132,43 @@ struct Serve: ParsableCommand {
         server.start()
         print("deskswitch \(deskswitchVersion) serving on port \(config.listenPort) as '\(config.machineName)'")
         RunLoop.main.run()  // Task 20 adds the SleepGuard timer here
+    }
+}
+
+struct Autostart: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        abstract: "Manage launch-at-login registration (run from inside DeskSwitch.app).")
+
+    @Argument(help: "enable | disable | status")
+    var action: String
+
+    func run() throws {
+        guard Bundle.main.bundlePath.hasSuffix(".app") else {
+            fail("autostart must be run via the installed bundle, e.g. " +
+                 "/Applications/DeskSwitch.app/Contents/MacOS/deskswitch autostart \(action)")
+        }
+        let service = SMAppService.agent(plistName: "com.vuphan.deskswitch.plist")
+        switch action {
+        case "enable":
+            try service.register()
+            print("registered (status: \(statusText(service.status)))")
+        case "disable":
+            try service.unregister()
+            print("unregistered")
+        case "status":
+            print(statusText(service.status))
+        default:
+            fail("action must be enable, disable, or status")
+        }
+    }
+
+    private func statusText(_ status: SMAppService.Status) -> String {
+        switch status {
+        case .enabled: return "enabled"
+        case .notRegistered: return "not registered"
+        case .requiresApproval: return "requires approval in System Settings > General > Login Items"
+        case .notFound: return "not found"
+        @unknown default: return "unknown (\(status.rawValue))"
+        }
     }
 }
