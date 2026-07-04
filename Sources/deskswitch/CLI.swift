@@ -23,10 +23,9 @@ func loadValidatedConfig() -> Config {
     return config
 }
 
-/// Peer client factory. M1: no HTTP client yet, so the peer is always unreachable.
-/// (Task 12 swaps in HTTPPeerClient; Task 16 wraps it in WakingPeerClient.)
+/// Peer client factory. (Task 16 wraps this in WakingPeerClient for WoL retry.)
 func makePeerClient(config: Config) -> PeerClient {
-    UnreachablePeerClient()
+    HTTPPeerClient(host: config.peer.host, port: config.peer.port, token: config.token)
 }
 
 func makeRouter(config: Config) -> Router {
@@ -42,7 +41,7 @@ struct DeskSwitchCLI: ParsableCommand {
         commandName: "deskswitch",
         abstract: "Programmatic monitor input switching between two Macs (DDC/CI).",
         version: deskswitchVersion,
-        subcommands: [Status.self, Probe.self, Switch.self])
+        subcommands: [Status.self, Probe.self, Switch.self, Serve.self])
 }
 
 struct Status: ParsableCommand {
@@ -100,5 +99,20 @@ struct Switch: ParsableCommand {
         } catch let e as RouterError {
             fail(e.userMessage)
         }
+    }
+}
+
+struct Serve: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        abstract: "Run the HTTP agent (headless mode).")
+
+    func run() throws {
+        let config = loadValidatedConfig()
+        let router = makeRouter(config: config)
+        let handler = APIHandler(router: router, token: config.token)
+        let server = try HTTPServer(port: UInt16(config.listenPort)) { handler.handle($0) }
+        server.start()
+        print("deskswitch \(deskswitchVersion) serving on port \(config.listenPort) as '\(config.machineName)'")
+        RunLoop.main.run()  // Task 20 adds the SleepGuard timer here
     }
 }
