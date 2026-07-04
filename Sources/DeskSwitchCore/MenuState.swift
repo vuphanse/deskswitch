@@ -87,4 +87,32 @@ public final class MenuState: ObservableObject {
             notifier.notify(title: "deskswitch", body: message)
         }
     }
+
+    public func bringAllHere() {
+        runAsync { [weak self] in
+            guard let self else { return }
+            self.performSwitchAll(to: self.config.machineName)
+        }
+    }
+
+    public func sendAllAway() {
+        runAsync { [weak self] in
+            guard let self else { return }
+            self.performSwitchAll(to: self.config.peer.name)
+        }
+    }
+
+    private func performSwitchAll(to target: String) {
+        let failures = router.switchAll(to: target).compactMap { entry -> String? in
+            guard case .failure(let error) = entry.result else { return nil }
+            return "\(entry.monitor): \(error.userMessage)"
+        }
+        // performRefresh publishes lastError from peer reachability; the switch failure
+        // (the more specific message) is published after it so it wins.
+        performRefresh()
+        if let first = failures.first {
+            publish { [weak self] in self?.lastError = first }
+            notifier.notify(title: "deskswitch", body: first)
+        }
+    }
 }

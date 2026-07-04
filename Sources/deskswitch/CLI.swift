@@ -87,7 +87,7 @@ struct Switch: ParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Switch a monitor's input to the given machine.")
 
-    @Argument(help: "Monitor name from config (e.g. M27Q).")
+    @Argument(help: "Monitor name from config (e.g. M27Q), or 'all' for both monitors.")
     var monitor: String
 
     @Argument(help: "Target machine name (this machine or the peer).")
@@ -95,8 +95,23 @@ struct Switch: ParsableCommand {
 
     func run() throws {
         let config = loadValidatedConfig()
+        let router = makeRouter(config: config)
+        if monitor == "all" {
+            var failed = false
+            for entry in router.switchAll(to: machine) {
+                switch entry.result {
+                case .success(let outcome):
+                    print("\(entry.monitor): \(outcome == .switchedLocally ? "switched locally" : "forwarded to peer")")
+                case .failure(let error):
+                    failed = true
+                    FileHandle.standardError.write(Data("\(entry.monitor): \(error.userMessage)\n".utf8))
+                }
+            }
+            if failed { throw ExitCode(1) }
+            return
+        }
         do {
-            let outcome = try makeRouter(config: config).switchMonitor(monitor, to: machine)
+            let outcome = try router.switchMonitor(monitor, to: machine)
             print(outcome == .switchedLocally ? "switched locally" : "forwarded to peer")
         } catch let e as RouterError {
             fail(e.userMessage)

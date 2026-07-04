@@ -27,7 +27,6 @@ enum Bootstrap {
             let handler = APIHandler(router: router, token: config.token)
             let server = try HTTPServer(port: UInt16(config.listenPort)) { handler.handle($0) }
             server.start()
-            // Task 17 replaces StderrNotifier with UserNotifier here.
             let state = MenuState(config: config, router: router, peer: peer,
                                   notifier: UserNotifier())
             return .success((state, server, config))
@@ -78,7 +77,9 @@ struct MenuContent: View {
                     Text("\(row.name): unknown")
                 }
             }
-            // Task 18 adds "Bring both here" / "Send both away" actions here.
+            Divider()
+            Button("Bring both here") { state.bringAllHere() }
+            Button("Send both away") { state.sendAllAway() }
             if let error = state.lastError {
                 Divider()
                 Text(error)

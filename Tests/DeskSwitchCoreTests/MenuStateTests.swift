@@ -94,4 +94,24 @@ final class MenuStateTests: XCTestCase {
         state.send("M27Q", to: "macbook")
         XCTAssertEqual(dispatched, 2)
     }
+
+    func testBringAllHereSwitchesEveryMonitorTowardThisMachine() {
+        ddc.names = ["M27Q", "PA278CV"]
+        ddc.inputs = ["M27Q": 27, "PA278CV": 17]
+        peer.statusResult = .success(LocalStatus(machine: "macbook", monitors: []))  // peer up, so the post-switch refresh reports no error
+        let state = makeState()
+        state.bringAllHere()
+        XCTAssertEqual(ddc.setCalls.map(\.code).sorted(), [15, 15])
+        XCTAssertNil(state.lastError)
+    }
+
+    func testSendAllAwayReportsFirstFailure() {
+        ddc.names = ["M27Q"]   // PA278CV not driven here…
+        peer.switchError = .unreachable  // …and peer is down → its switch fails
+        let state = makeState()
+        state.sendAllAway()
+        XCTAssertEqual(ddc.setCalls.map(\.code), [27])  // M27Q still pushed
+        XCTAssertEqual(state.lastError, "PA278CV: other Mac offline")
+        XCTAssertEqual(notifier.messages.count, 1)
+    }
 }
