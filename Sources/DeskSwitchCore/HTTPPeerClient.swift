@@ -15,11 +15,11 @@ public final class HTTPPeerClient: PeerClient {
     }
 
     public func status() throws -> LocalStatus {
-        let data = try send(path: "/status", method: "GET", body: nil)
+        let (status, data) = try send(path: "/status", method: "GET", body: nil)
         do {
             return try JSONDecoder().decode(LocalStatus.self, from: data)
         } catch {
-            throw PeerClientError.remote(status: 200, message: "undecodable status payload")
+            throw PeerClientError.remote(status: status, message: "undecodable status payload")
         }
     }
 
@@ -29,7 +29,7 @@ public final class HTTPPeerClient: PeerClient {
         _ = try send(path: "/switch", method: "POST", body: body)
     }
 
-    private func send(path: String, method: String, body: Data?) throws -> Data {
+    private func send(path: String, method: String, body: Data?) throws -> (status: Int, data: Data) {
         var request = URLRequest(url: baseURL.appendingPathComponent(path))
         request.httpMethod = method
         request.httpBody = body
@@ -53,6 +53,6 @@ public final class HTTPPeerClient: PeerClient {
                 ?? "peer returned \(http.statusCode)"
             throw PeerClientError.remote(status: http.statusCode, message: message)
         }
-        return data
+        return (http.statusCode, data)
     }
 }

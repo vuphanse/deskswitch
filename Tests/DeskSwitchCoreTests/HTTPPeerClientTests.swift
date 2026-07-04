@@ -51,6 +51,19 @@ final class HTTPPeerClientTests: XCTestCase {
         }
     }
 
+    func testUndecodableStatusPayloadThrowsRemoteWithRealStatus() throws {
+        let server = try serve(port: 18383) { _ in
+            .json(200, ["not": "a-local-status"])
+        }
+        defer { server.stop() }
+
+        let client = HTTPPeerClient(host: "127.0.0.1", port: 18383, token: "secret")
+        XCTAssertThrowsError(try client.status()) {
+            XCTAssertEqual($0 as? PeerClientError,
+                           .remote(status: 200, message: "undecodable status payload"))
+        }
+    }
+
     func testUnreachableHostThrowsUnreachableWithinBudget() {
         // Nothing listens on this port.
         let client = HTTPPeerClient(host: "127.0.0.1", port: 18399, token: "secret")
