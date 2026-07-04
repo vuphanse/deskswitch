@@ -23,9 +23,11 @@ func loadValidatedConfig() -> Config {
     return config
 }
 
-/// Peer client factory. (Task 16 wraps this in WakingPeerClient for WoL retry.)
+/// Peer client with WoL-and-retry on unreachable (degrades to plain errors
+/// when peer.mac is unset — config validation already warned about that).
 func makePeerClient(config: Config) -> PeerClient {
-    HTTPPeerClient(host: config.peer.host, port: config.peer.port, token: config.token)
+    let http = HTTPPeerClient(host: config.peer.host, port: config.peer.port, token: config.token)
+    return WakingPeerClient(inner: http, wol: makeWoLSender(config: config))
 }
 
 func makeRouter(config: Config) -> Router {
