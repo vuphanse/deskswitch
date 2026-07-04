@@ -29,7 +29,7 @@ enum Bootstrap {
             server.start()
             // Task 17 replaces StderrNotifier with UserNotifier here.
             let state = MenuState(config: config, router: router, peer: peer,
-                                  notifier: StderrNotifier())
+                                  notifier: UserNotifier())
             return .success((state, server, config))
         } catch {
             return .failure(BootstrapError(message: "\(error)"))
