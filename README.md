@@ -170,4 +170,4 @@ TOKEN=<token> MINI=macmini.local:8377 MBP=macbook.local:8377 scripts/e2e.sh
 
 ## License
 
-Not yet licensed (all rights reserved). Add a `LICENSE` file if you want to allow reuse.
+[MIT](LICENSE) © Vu Phan
